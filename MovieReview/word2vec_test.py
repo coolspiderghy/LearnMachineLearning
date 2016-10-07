@@ -120,11 +120,11 @@ def word2vec_test():
     #get_word2vector_model(sentences())
     #print "finish building word2vec model"
     import cPickle as pickle 
-    
+    """
     words_idx,n_dig = word_of_cluster()
     with open('words_idx.pickle', 'wb') as f: 
         pickle.dump((words_idx,n_dig), f, -1)
-    
+    """
     with open('words_idx.pickle', 'rb') as f: 
         words_idx,n_dig = pickle.load(f)
         
@@ -147,6 +147,55 @@ def word2vec_test():
         return dataset,features
        
     train,train_features = get_data_features('labeledTrainData.tsv')
+    print train_features.shape
+    X,Y = train_features,train['sentiment']
+    print X.shape,Y.shape,X,Y,type(X),type(Y)
+    Y = np.array(Y)
+    print X.shape,Y.shape,X,Y,type(X),type(Y)
+    # Create first network with Keras
+    def train_NN_model(X,Y):
+
+        from keras.models import Sequential
+        from keras.layers.core import Dense,Activation 
+        from keras.wrappers.scikit_learn import KerasClassifier
+        from keras.utils import np_utils
+        from sklearn.cross_validation import StratifiedKFold
+        from sklearn.cross_validation import cross_val_score
+        from sklearn import cross_validation
+        # X_train,X_test,Y_train,Y_test = cross_validation.train_test_split(X,Y,test_size = 0.3,random_state = 7)
+        Y = np_utils.to_categorical(Y, 2)
+        model = Sequential()
+        model.add(Dense(3298,12,init='uniform'))
+        model.add(Activation('relu'))
+        model.add(Dense(12,8, init='uniform'))
+        model.add(Activation('relu'))
+        model.add(Dense(8,2, init='uniform'))
+        model.add(Activation('sigmoid'))
+        model.compile(loss='binary_crossentropy', optimizer='adam')
+        # Fit the model
+        model.fit(X, Y, nb_epoch=150, batch_size=10,shuffle=True,verbose=1,show_accuracy=True,validation_split=0.3)
+        # evaluate the model
+        scores = model.evaluate(X,Y)
+        print scores
+
+    """
+        from keras.models import Sequential  
+        from keras.layers.core import Dense, Activation  
+        from keras.layers.recurrent import LSTM
+
+        in_neurons = 3298  
+        out_neurons = 2
+        hidden_neurons = 300
+
+        model = Sequential()  
+        model.add(LSTM(in_neurons, hidden_neurons, return_sequences=False))  
+        model.add(Dense(hidden_neurons, out_neurons))  
+        model.add(Activation("linear"))  
+        model.compile(loss="mean_squared_error", optimizer="rmsprop") 
+        model.fit(X, Y, nb_epoch=150, batch_size=10,shuffle=True,verbose=1,show_accuracy=True,validation_split=0.3) 
+    train_NN_model(X, Y)
+    """
+    """
     #test,test_features = get_data_features('testData.tsv')
     #train model by RandomForest
     #from sklearn.ensemble import RandomForestClassifier as RF_clf
@@ -163,7 +212,7 @@ def word2vec_test():
     model.fit(X_train,Y_train)
     results = model.score(X_test,Y_test)
     print results*100
-    """
+
     from sklearn.grid_search import GridSearchCV
     tuned_parameters =[{'penalty': ['l1'], 'tol': [1e-3, 1e-4],
                      'C': [1, 10, 100, 1000]},
@@ -193,7 +242,7 @@ def word2vec_test():
     target = model.predict(test_features)
     results = pd.DataFrame(data = {'id':test['id'],'sentiment':target})
     results.to_csv('Bagofcluster.csv',index=False,quoting=3)
-    """
+
     import matplotlib.pyplot as plt
     from sklearn.metrics import auc,roc_curve
     pred_pro = model.predict_proba(X_test)[:,1]
@@ -203,6 +252,7 @@ def word2vec_test():
     plt.plot(fpr,tpr,label = 'area = %s' %(roc_auc))
     plt.plot([0,1],[0,1],'k--')
     plt.show()    
+    """
 if __name__ == '__main__':
     import time
     t1 = time.clock()

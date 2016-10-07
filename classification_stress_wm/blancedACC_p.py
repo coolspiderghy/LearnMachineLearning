@@ -57,4 +57,4 @@ def bacc_mean(C):
     return b
 import numpy as np
 C=np.array([[50,10],[10,50]])
-print bacc_mean(C),bacc_p(C)
+#print bacc_mean(C),bacc_p(C)

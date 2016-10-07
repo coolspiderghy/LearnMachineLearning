@@ -1,3 +1,4 @@
+#coding=utf-8
 def word2vec_test():
     import pandas as pd
     import numpy as np
@@ -15,13 +16,38 @@ def word2vec_test():
         # do tokenization
         lower_case = letter_only.lower()
         words  = lower_case.split()
-        #import nltk
-        #nltk.download('stopwords')
+        # remove stop word
         from nltk.corpus import stopwords
         #print stopwords.words('english')
         if remove_stopwords:
             stopwords = set(stopwords.words('english'))
-            words = [w for w in words if not w in stopwords]    
+            words = [w for w in words if not w in stopwords] 
+        #去除标点符号
+        remove_punc = False
+        if remove_punc:
+            english_punctuations = [',', '.', ':', ';', '?', '(', ')', '[', ']', '&', '!', '*', '@', '#', '$', '%']
+            words = [word for word in words if not word in english_punctuations]
+        #词干化
+        stemming = False
+        if stemming:
+            from nltk.stem.lancaster import LancasterStemmer
+            st = LancasterStemmer()
+            words = [st.stem(word) for word in words]
+        #去除过低频词
+        low_freq_filter = True
+        word_min = 0
+        if low_freq_filter:
+            all_stems = words#sum(words, [])
+            stems_once = set(stem for stem in set(all_stems) if all_stems.count(stem) < word_min) # this is the threshold of freq of word
+            words = [word for word in words if word not in stems_once]
+        else:
+            words = words  
+        # spell check
+        spell_check =False
+        if spell_check:
+            import enchant
+            d = enchant.Dict("en_US")
+            words = [word for word in set(words) if d.check(word)]
         return( " ".join(words))
     def review_to_sentences(review,remove_stopwords=False):
         #nltk.download('punkt')
@@ -144,11 +170,11 @@ def word2vec_test():
         #features = np.zeros((dataset['review'].size,n_dig),dtype = 'float32')
         reviews = []
         cnt = 0
-        for review in dataset['review']:
+        for review in dataset['review'][0:5000]:
             if((cnt+1)%1000 == 0):
-                cnt +=cnt
-                print cnt
+                print 'finished preprocessing %s review' %(cnt+1)
             reviews.append(review_to_words(review)) 
+            cnt =cnt+1
         """
         from sklearn.feature_extraction.text import CountVectorizer
         vectorizer = CountVectorizer()
@@ -158,12 +184,28 @@ def word2vec_test():
         vectorizer = TfidfVectorizer()
         feature = vectorizer.fit_transform(reviews)
         return dataset,feature.toarray()     
-    train,train_features = get_data_features('labeledTrainData.tsv')
-    print train_features[0].shape
+    
+    #_,train_features = get_data_features('labeledTrainData.tsv')
+    
+    """
+    import cPickle as pickle 
+    with open('train_features.pickle','wb') as f:
+        pickle.dump((train_features),f,-1)
+    
+    with open('train_features.pickle','rb') as f:
+        train_features = pickle.load(f)    
+    train_features = pd.DataFrame(train_features)
+    train_features = train_features.iloc[:1000,:10]
+    print train_features.dtypes
+    """
+    #train_features[:1,0:10]
+
     #test,test_features = get_data_features('testData.tsv')
     #train model by RandomForest
     #from sklearn.ensemble import RandomForestClassifier as RF_clf
     #from sklearn import svm
+    """
+    print 'training model.........'
     from sklearn.linear_model import LogisticRegression#,SGDClassifier
     #from sklearn.naive_bayes import GaussianNB
     from sklearn import cross_validation
@@ -176,7 +218,7 @@ def word2vec_test():
     model.fit(X_train,Y_train)
     results = model.score(X_test,Y_test)
     print results*100
-    """
+    
     from sklearn.grid_search import GridSearchCV
     tuned_parameters =[{'penalty': ['l1'], 'tol': [1e-3, 1e-4],
                      'C': [1, 10, 100, 1000]},
@@ -206,7 +248,7 @@ def word2vec_test():
     target = model.predict(test_features)
     results = pd.DataFrame(data = {'id':test['id'],'sentiment':target})
     results.to_csv('Bagofcluster.csv',index=False,quoting=3)
-    """
+
     import matplotlib.pyplot as plt
     from sklearn.metrics import auc,roc_curve
     pred_pro = model.predict_proba(X_test)[:,1]
@@ -215,7 +257,8 @@ def word2vec_test():
     print roc_auc
     plt.plot(fpr,tpr,label = 'area = %s' %(roc_auc))
     plt.plot([0,1],[0,1],'k--')
-    plt.show()    
+    plt.show()  
+    """ 
 if __name__ == '__main__':
     import time
     t1 = time.clock()
